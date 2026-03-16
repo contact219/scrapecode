@@ -2,7 +2,42 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript + a Python terminal application (JobSearch Pro).
+
+## JobSearch Pro (Python Terminal App)
+
+**Entry point:** `python replit_main.py`
+
+A Python terminal application that searches multiple job boards for remote/hybrid jobs,
+parses PDF/DOCX resumes to build targeted search queries, and exports results to an Excel file.
+
+### Structure
+```
+replit_main.py     ← Replit entry point
+main.py            ← Local entry point
+requirements.txt   ← Python dependencies
+core/
+  config_manager.py  ← JSON-backed settings
+  profile_manager.py ← Named search profiles
+  resume_parser.py   ← PDF/DOCX skill extractor + query builder
+  scraper.py         ← 5-source job scraper (Indeed, LinkedIn, ZipRecruiter, Glassdoor, Adzuna)
+  spreadsheet.py     ← Formatted .xlsx builder (3 tabs: Listings, Summary, Config)
+  nas_uploader.py    ← NAS upload (disabled on Replit)
+  emailer.py         ← SMTP email with attachment
+ui/
+  menu.py            ← Full ANSI-colored interactive terminal menu
+output/              ← Generated Excel spreadsheets
+profiles/            ← Saved search profiles (JSON)
+logs/                ← Run logs
+```
+
+### Running
+- Hit **Run** → menu launches in the console
+- After a search run, find `.xlsx` files in **Files → output/**
+- Set `MOCK=1` in Settings menu to test without scraping live job boards
+
+### Testing without scraping
+In the app: **Settings → Enable MOCK mode** — returns fake job data without hitting real sites.
 
 ## Stack
 

@@ -1,0 +1,52 @@
+Build and run JobSearch Pro — a Python terminal application that searches
+multiple job boards for remote and hybrid jobs, parses the user's resume to
+build targeted search queries, and exports results to a formatted Excel file.
+
+PROJECT STRUCTURE ALREADY PROVIDED:
+  main.py, replit_main.py, requirements.txt, .replit
+  core/: config_manager.py, profile_manager.py, resume_parser.py,
+         scraper.py, spreadsheet.py, nas_uploader.py, emailer.py
+  ui/menu.py
+
+ENTRY POINT FOR REPLIT:
+  python replit_main.py
+
+INSTALL DEPENDENCIES:
+  pip install -r requirements.txt
+
+WHAT THE APP DOES:
+  1. Presents a numbered terminal menu
+  2. Lets the user create named "search profiles" with custom job queries,
+     salary minimums, work type filters (remote/hybrid), and sources
+  3. Parses uploaded PDF or DOCX resumes to extract job titles, skills,
+     tools, certifications, and industries — then generates targeted search
+     queries from those signals
+  4. Shows the user the extracted skills and suggested queries for approval
+     and editing before saving them to the profile
+  5. Searches Indeed, LinkedIn, ZipRecruiter, Glassdoor, and Adzuna using
+     BeautifulSoup scraping
+  6. Deduplicates results and builds a color-coded .xlsx spreadsheet with
+     three tabs: Job Listings, Summary, and Search Config
+  7. Optionally emails the spreadsheet (configure SMTP in the menu)
+  8. Saves all output to the output/ directory; user downloads from
+     Replit's Files panel
+
+REPLIT-SPECIFIC NOTES:
+  - NAS upload is disabled (no local network in Replit cloud)
+  - All file output goes to output/ in the Replit filesystem
+  - The .replit config sets replit_main.py as the run target
+  - No web server or Flask needed — this is a pure terminal/console app
+  - The menu uses ANSI color codes; these render correctly in Replit's console
+
+IF THE USER ASKS TO MODIFY THE APP:
+  - To add a new job source: add a method _sourcename() to core/scraper.py
+    following the same pattern as _indeed(), then add it to the dispatch dict
+  - To add preset queries: edit the PRESETS dict in ui/menu.py _add_presets()
+  - To add new resume skill detection: add keywords to SKILL_KEYWORDS in
+    core/resume_parser.py and add templates to QUERY_TEMPLATES
+  - To change spreadsheet formatting: edit core/spreadsheet.py
+
+TESTING WITHOUT REAL SCRAPING:
+  To test the menu and spreadsheet without hitting live job boards, add a
+  --mock flag: in core/scraper.py search() method, if os.environ.get('MOCK'):
+  return a list of 5 fake job dicts instead of calling the real scraper.
