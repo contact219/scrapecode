@@ -297,9 +297,20 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
+  const token = typeof localStorage !== "undefined" ? localStorage.getItem("jspro_token") : null;
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+
   const requestInfo = { method, url: resolveUrl(input) };
 
   const response = await fetch(input, { ...init, method, headers });
+
+  if (response.status === 401) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth:logout"));
+    }
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

@@ -8,7 +8,8 @@ import {
   SidebarMenuItem, 
   SidebarProvider, 
   SidebarTrigger, 
-  SidebarHeader 
+  SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
@@ -16,12 +17,16 @@ import {
   Search, 
   FileText, 
   History, 
-  Settings 
+  Settings,
+  LogOut,
 } from "lucide-react";
 import { ReactNode } from "react";
+import { useAuth } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
+  const { logout } = useAuth();
   
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -73,10 +78,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </SidebarMenu>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="px-3 py-4 border-t border-border/40">
+            <Button
+              variant="ghost"
+              onClick={logout}
+              className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl py-6 font-normal transition-all"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-[15px]">Sign Out</span>
+            </Button>
+          </SidebarFooter>
         </Sidebar>
         
         <div className="flex-1 flex flex-col overflow-hidden relative w-full">
-          {/* Subtle Background Glow */}
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none mix-blend-screen" />
           
           <header className="h-16 shrink-0 flex items-center justify-between border-b border-border/40 px-6 bg-background/60 backdrop-blur-xl sticky top-0 z-20">

@@ -5,12 +5,16 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Settings2, Mail } from "lucide-react";
+import { Save, Settings2, Mail, Lock, RotateCcw, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const configSchema = z.object({
   max_results_per_query: z.coerce.number().min(1).max(500),
@@ -25,6 +29,123 @@ const configSchema = z.object({
 });
 
 type ConfigValues = z.infer<typeof configSchema>;
+
+function PasswordSection() {
+  const { token, logout } = useAuth();
+  const { toast } = useToast();
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [changePending, setChangePending] = useState(false);
+  const [resetPending, setResetPending] = useState(false);
+
+  const handleChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPw || newPw.length < 4) {
+      toast({ title: "Error", description: "New password must be at least 4 characters.", variant: "destructive" });
+      return;
+    }
+    setChangePending(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: "Password Changed", description: "Your password has been updated. Please sign in again." });
+      setCurrentPw(""); setNewPw("");
+      setTimeout(() => logout(), 1500);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to change password.", variant: "destructive" });
+    } finally {
+      setChangePending(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm("Reset password back to 'admin'? You will be signed out.")) return;
+    setResetPending(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: "Password Reset", description: "Password has been reset to 'admin'." });
+      setTimeout(() => logout(), 1500);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Reset failed.", variant: "destructive" });
+    } finally {
+      setResetPending(false);
+    }
+  };
+
+  return (
+    <Card className="border-border/50 shadow-xl bg-card/60 backdrop-blur">
+      <CardHeader className="border-b border-border/50 pb-5">
+        <CardTitle className="text-xl flex items-center gap-2">
+          <Lock className="w-5 h-5 text-emerald-500" /> Access & Security
+        </CardTitle>
+        <CardDescription>Change your dashboard password. You will be signed out after any change.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-6">
+        <form onSubmit={handleChange} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="current-pw" className="font-semibold text-foreground">Current Password</Label>
+              <div className="relative">
+                <Input
+                  id="current-pw"
+                  type={showCurrent ? "text" : "password"}
+                  value={currentPw}
+                  onChange={e => setCurrentPw(e.target.value)}
+                  placeholder="Enter current password"
+                  className="h-11 bg-background/50 pr-10"
+                />
+                <button type="button" onClick={() => setShowCurrent(!showCurrent)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-pw" className="font-semibold text-foreground">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="new-pw"
+                  type={showNew ? "text" : "password"}
+                  value={newPw}
+                  onChange={e => setNewPw(e.target.value)}
+                  placeholder="Min. 4 characters"
+                  className="h-11 bg-background/50 pr-10"
+                />
+                <button type="button" onClick={() => setShowNew(!showNew)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <Button type="submit" disabled={changePending || !currentPw || !newPw}
+              className="rounded-xl px-6 h-10 font-semibold shadow-md">
+              {changePending ? "Updating..." : "Change Password"}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleReset} disabled={resetPending}
+              className="rounded-xl px-6 h-10 text-muted-foreground border-border/50 hover:border-destructive/50 hover:text-destructive hover:bg-destructive/10 gap-2">
+              <RotateCcw className="w-4 h-4" />
+              {resetPending ? "Resetting..." : "Reset to 'admin'"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SettingsPage() {
   const { data: config, isLoading } = useGetConfig();
@@ -72,8 +193,10 @@ export default function SettingsPage() {
       <div className="space-y-8 max-w-4xl mx-auto">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground mt-1 text-lg">Configure scraping engine limits and notification preferences.</p>
+          <p className="text-muted-foreground mt-1 text-lg">Configure scraping engine limits, notifications, and security.</p>
         </div>
+
+        <PasswordSection />
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

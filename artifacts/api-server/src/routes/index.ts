@@ -6,8 +6,14 @@ import resumeRouter from "./resume";
 import configRouter from "./config";
 import historyRouter from "./history";
 import outputRouter from "./output";
+import authRouter from "./auth";
+import { requireAuth } from "../middleware/authMiddleware";
 
 const router: IRouter = Router();
+
+router.use(authRouter);
+
+router.use(requireAuth);
 
 router.use(healthRouter);
 router.use(profilesRouter);
