@@ -11,7 +11,7 @@ import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Trash2, CheckCircle2, Save, FileEdit, AlertCircle } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Save, FileEdit, AlertCircle, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -230,7 +230,7 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: { mode: 'crea
               >
                 {isActive ? <><CheckCircle2 className="w-4 h-4 mr-2"/> Active</> : "Set Active"}
               </Button>
-              <Button variant="destructive" size="icon" onClick={handleDelete} disabled={isDeleting} tooltip="Delete Profile">
+              <Button variant="destructive" size="icon" onClick={handleDelete} disabled={isDeleting} title="Delete Profile">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -285,7 +285,7 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: { mode: 'crea
             </div>
 
             <div className="space-y-3 p-5 rounded-xl border border-border/50 bg-muted/20">
-              <FormLabel className="text-foreground font-semibold block mb-4">Job Board Sources</FormLabel>
+              <Label className="text-foreground font-semibold block mb-4">Job Board Sources</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {sourceOptions.map(source => (
                   <FormField key={source} control={form.control} name="sources" render={({ field }) => (
@@ -311,7 +311,7 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: { mode: 'crea
 
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                <FormLabel className="text-foreground font-semibold text-lg">Search Queries</FormLabel>
+                <Label className="text-foreground font-semibold text-lg">Search Queries</Label>
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ query: "", category: "custom" })} className="rounded-lg h-9">
                   <Plus className="w-4 h-4 mr-2" /> Add Query
                 </Button>
