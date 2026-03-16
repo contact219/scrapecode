@@ -10,3 +10,5 @@ openpyxl
 pdfplumber
 python-docx
 requests
+flask
+flask-cors

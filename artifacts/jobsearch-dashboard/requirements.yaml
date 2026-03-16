@@ -1,0 +1,14 @@
+packages:
+  "framer-motion": "For page transitions and smooth UI animations"
+  "recharts": "For dashboard charts and statistics"
+  "date-fns": "For formatting dates in history and dashboard"
+  "react-hook-form": "Form management"
+  "@hookform/resolvers": "Zod resolver for forms"
+  "lucide-react": "Icons"
+  "clsx": "Class merging"
+  "tailwind-merge": "Class merging"
+
+notes:
+  - "The UI relies heavily on a sleek, dark, professional theme. Index.css defines these colors."
+  - "The SSE stream hook handles real-time job scraping updates."
+  - "API calls use the generated orval hooks from @workspace/api-client-react"

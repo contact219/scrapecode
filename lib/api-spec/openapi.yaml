@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: JobSearch Pro API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: profiles
+    description: Search profile management
+  - name: search
+    description: Job search operations
+  - name: resume
+    description: Resume parsing
+  - name: history
+    description: Run history
+  - name: output
+    description: File output
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,243 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /profiles:
+    get:
+      operationId: listProfiles
+      tags: [profiles]
+      summary: List all search profiles
+      responses:
+        "200":
+          description: List of profile names
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileListResponse"
+    post:
+      operationId: createProfile
+      tags: [profiles]
+      summary: Create a new search profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfileRequest"
+      responses:
+        "201":
+          description: Created profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /profiles/{name}:
+    get:
+      operationId: getProfile
+      tags: [profiles]
+      summary: Get a profile by name
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    put:
+      operationId: updateProfile
+      tags: [profiles]
+      summary: Update a profile
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Profile"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    delete:
+      operationId: deleteProfile
+      tags: [profiles]
+      summary: Delete a profile
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /profiles/active:
+    get:
+      operationId: getActiveProfile
+      tags: [profiles]
+      summary: Get active profile name
+      responses:
+        "200":
+          description: Active profile info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveProfileResponse"
+    post:
+      operationId: setActiveProfile
+      tags: [profiles]
+      summary: Set active profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetActiveProfileRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /search:
+    post:
+      operationId: runSearch
+      tags: [search]
+      summary: Run a job search (returns job_id for SSE streaming)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunSearchRequest"
+      responses:
+        "200":
+          description: Search started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchStartedResponse"
+
+  /search/results/{jobId}:
+    get:
+      operationId: getSearchResults
+      tags: [search]
+      summary: Get completed search results
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResultsResponse"
+
+  /resume/parse:
+    post:
+      operationId: parseResume
+      tags: [resume]
+      summary: Parse a resume file (multipart upload)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Parsed resume data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeParseResponse"
+
+  /history:
+    get:
+      operationId: getHistory
+      tags: [history]
+      summary: Get run history
+      responses:
+        "200":
+          description: Run history list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryResponse"
+
+  /output/files:
+    get:
+      operationId: listOutputFiles
+      tags: [output]
+      summary: List available output files
+      responses:
+        "200":
+          description: List of output files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutputFilesResponse"
+
+  /config:
+    get:
+      operationId: getConfig
+      tags: [profiles]
+      summary: Get app configuration
+      responses:
+        "200":
+          description: Config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppConfig"
+    put:
+      operationId: updateConfig
+      tags: [profiles]
+      summary: Update app configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppConfig"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +276,253 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+      required: [message, success]
+
+    SearchQuery:
+      type: object
+      properties:
+        query:
+          type: string
+        category:
+          type: string
+      required: [query]
+
+    Profile:
+      type: object
+      properties:
+        name:
+          type: string
+        salary_min:
+          type: integer
+        work_type:
+          type: string
+          enum: [remote, hybrid, both]
+        sources:
+          type: array
+          items:
+            type: string
+        queries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchQuery"
+        resume_ref:
+          type: string
+      required: [name, salary_min, work_type, sources, queries]
+
+    CreateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        salary_min:
+          type: integer
+        work_type:
+          type: string
+          enum: [remote, hybrid, both]
+        sources:
+          type: array
+          items:
+            type: string
+        queries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchQuery"
+      required: [name]
+
+    ProfileListResponse:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            type: string
+        active:
+          type: string
+          nullable: true
+      required: [profiles]
+
+    ActiveProfileResponse:
+      type: object
+      properties:
+        active:
+          type: string
+          nullable: true
+      required: [active]
+
+    SetActiveProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+      required: [name]
+
+    RunSearchRequest:
+      type: object
+      properties:
+        profile_name:
+          type: string
+        mock:
+          type: boolean
+      required: [profile_name]
+
+    SearchStartedResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+        message:
+          type: string
+      required: [job_id, message]
+
+    JobListing:
+      type: object
+      properties:
+        title:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+        salary:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        source:
+          type: string
+        date_found:
+          type: string
+        query:
+          type: string
+        work_type:
+          type: string
+      required: [title, company, location, source]
+
+    SearchResultsResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, error]
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobListing"
+        total:
+          type: integer
+        filepath:
+          type: string
+        error:
+          type: string
+      required: [job_id, status, jobs, total]
+
+    ResumeParseResponse:
+      type: object
+      properties:
+        titles:
+          type: array
+          items:
+            type: string
+        skills:
+          type: array
+          items:
+            type: string
+        tools:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        industries:
+          type: array
+          items:
+            type: string
+        suggested_queries:
+          type: array
+          items:
+            type: string
+        raw_text_preview:
+          type: string
+      required: [titles, skills, tools, certifications, industries, suggested_queries]
+
+    HistoryEntry:
+      type: object
+      properties:
+        date:
+          type: string
+        profile:
+          type: string
+        total:
+          type: integer
+        filepath:
+          type: string
+      required: [date, profile, total]
+
+    HistoryResponse:
+      type: object
+      properties:
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryEntry"
+      required: [history]
+
+    OutputFile:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        modified:
+          type: string
+        download_url:
+          type: string
+      required: [name, size, modified, download_url]
+
+    OutputFilesResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutputFile"
+      required: [files]
+
+    AppConfig:
+      type: object
+      properties:
+        max_results_per_query:
+          type: integer
+        request_delay:
+          type: number
+        email_enabled:
+          type: boolean
+        email_from:
+          type: string
+        email_to:
+          type: string
+        smtp_host:
+          type: string
+        smtp_port:
+          type: integer
+        smtp_user:
+          type: string
+        smtp_password:
+          type: string
+      required: [max_results_per_query, request_delay]
