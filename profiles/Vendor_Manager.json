@@ -1,0 +1,19 @@
+{
+  "salary_min": 100,
+  "work_type": "remote",
+  "sources": [
+    "indeed",
+    "linkedin",
+    "ziprecruiter",
+    "glassdoor",
+    "adzuna"
+  ],
+  "queries": [
+    {
+      "query": "procurement manager remote",
+      "category": "custom"
+    }
+  ],
+  "resume_ref": "",
+  "name": "Vendor Manager"
+}

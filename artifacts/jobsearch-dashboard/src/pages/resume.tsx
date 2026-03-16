@@ -3,7 +3,7 @@ import { useParseResume, useGetActiveProfile, useGetProfile, useUpdateProfile } 
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UploadCloud, FileText, CheckCircle2, Plus, Loader2 } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle2, Plus, Loader2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
