@@ -52,7 +52,7 @@ export default function LoginPage() {
             <Search className="w-8 h-8 text-primary" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">JobSearch Pro</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">ScrapeCode</h1>
             <p className="text-muted-foreground text-sm mt-1">Automated job intelligence platform</p>
           </div>
         </div>

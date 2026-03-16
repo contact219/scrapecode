@@ -51,7 +51,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="bg-primary/10 p-2 rounded-xl border border-primary/20 shrink-0">
                 <Search className="w-5 h-5" />
               </div>
-              <span className="truncate">JobSearch Pro</span>
+              <span className="truncate">ScrapeCode</span>
             </div>
           </SidebarHeader>
           <SidebarContent className="px-3 py-2">
