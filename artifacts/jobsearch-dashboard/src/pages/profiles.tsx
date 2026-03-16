@@ -306,7 +306,9 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: { mode: 'crea
                   )} />
                 ))}
               </div>
-              <FormMessage />
+              {form.formState.errors.sources && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.sources.message as string}</p>
+              )}
             </div>
 
             <div className="space-y-4">
