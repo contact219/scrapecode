@@ -3,39 +3,45 @@ import { loadConfig, saveConfig } from "./profiles";
 
 const router = Router();
 
-const CONFIG_KEYS = [
-  "max_results_per_query", "request_delay",
-  "email_enabled", "email_from", "email_to",
-  "smtp_host", "smtp_port", "smtp_user", "smtp_password",
-];
+const DEFAULTS: Record<string, any> = {
+  max_results_per_query: 25,
+  request_delay: 2.0,
+  email_enabled: false,
+  email_from: "",
+  email_to: "",
+  smtp_host: "smtp.gmail.com",
+  smtp_port: 587,
+  smtp_user: "",
+  smtp_password: "",
+};
 
-router.get("/config", (_req, res) => {
-  const cfg = loadConfig();
-  const result: Record<string, any> = {
-    max_results_per_query: 25,
-    request_delay: 2.0,
-    email_enabled: false,
-    email_from: "",
-    email_to: "",
-    smtp_host: "smtp.gmail.com",
-    smtp_port: 587,
-    smtp_user: "",
-    smtp_password: "",
-  };
-  for (const k of CONFIG_KEYS) {
-    if (k in cfg) result[k] = cfg[k];
+const CONFIG_KEYS = Object.keys(DEFAULTS);
+
+router.get("/config", async (_req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const result = { ...DEFAULTS };
+    for (const k of CONFIG_KEYS) {
+      if (k in cfg) result[k] = cfg[k];
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: "DB error", detail: String(e) });
   }
-  res.json(result);
 });
 
-router.put("/config", (req, res) => {
-  const data = req.body ?? {};
-  const cfg = loadConfig();
-  for (const k of CONFIG_KEYS) {
-    if (k in data) cfg[k] = data[k];
+router.put("/config", async (req, res) => {
+  try {
+    const data = req.body ?? {};
+    const cfg = await loadConfig();
+    for (const k of CONFIG_KEYS) {
+      if (k in data) cfg[k] = data[k];
+    }
+    await saveConfig(cfg);
+    res.json({ message: "Config updated", success: true });
+  } catch (e) {
+    res.status(500).json({ error: "DB error", detail: String(e) });
   }
-  saveConfig(cfg);
-  res.json({ message: "Config updated", success: true });
 });
 
 export default router;

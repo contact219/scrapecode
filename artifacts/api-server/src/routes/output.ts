@@ -4,8 +4,7 @@ import { join, basename } from "path";
 import { createReadStream } from "fs";
 
 const router = Router();
-const HOME = process.env.REPL_HOME ?? ".";
-const OUTPUT_DIR = join(HOME, "output");
+const OUTPUT_DIR = "/tmp/scrapedata/output";
 
 router.get("/output/files", (_req, res) => {
   try {

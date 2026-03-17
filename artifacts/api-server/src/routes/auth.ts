@@ -1,39 +1,60 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { join } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { randomBytes } from "crypto";
-
-const WORKSPACE = process.env.REPL_HOME ?? process.cwd();
-const PROFILES_DIR = join(WORKSPACE, "profiles");
-const AUTH_FILE = join(PROFILES_DIR, "auth.json");
+import pool from "../lib/db";
 
 interface AuthData {
   password_hash: string;
   jwt_secret: string;
 }
 
-export function loadAuth(): AuthData {
-  if (!existsSync(AUTH_FILE)) {
-    if (!existsSync(PROFILES_DIR)) mkdirSync(PROFILES_DIR, { recursive: true });
+let _authCache: AuthData | null = null;
+
+export async function initAuth(): Promise<void> {
+  const res = await pool.query(
+    "SELECT password_hash, jwt_secret FROM sc_auth WHERE id = 1"
+  );
+  if (res.rowCount === 0) {
     const auth: AuthData = {
       password_hash: bcrypt.hashSync("admin", 10),
       jwt_secret: randomBytes(32).toString("hex"),
     };
-    writeFileSync(AUTH_FILE, JSON.stringify(auth, null, 2));
-    return auth;
+    await pool.query(
+      "INSERT INTO sc_auth (id, password_hash, jwt_secret) VALUES (1, $1, $2)",
+      [auth.password_hash, auth.jwt_secret]
+    );
+    _authCache = auth;
+  } else {
+    _authCache = {
+      password_hash: res.rows[0].password_hash,
+      jwt_secret: res.rows[0].jwt_secret,
+    };
   }
-  return JSON.parse(readFileSync(AUTH_FILE, "utf-8")) as AuthData;
 }
 
-function saveAuth(auth: AuthData) {
-  writeFileSync(AUTH_FILE, JSON.stringify(auth, null, 2));
+export function loadAuth(): AuthData {
+  if (!_authCache) {
+    return {
+      password_hash: bcrypt.hashSync("admin", 10),
+      jwt_secret: "bootstrap_secret",
+    };
+  }
+  return _authCache;
+}
+
+async function saveAuth(auth: AuthData) {
+  await pool.query(
+    `INSERT INTO sc_auth (id, password_hash, jwt_secret) VALUES (1, $1, $2)
+     ON CONFLICT (id) DO UPDATE SET password_hash = $1, jwt_secret = $2`,
+    [auth.password_hash, auth.jwt_secret]
+  );
+  _authCache = auth;
 }
 
 const router = Router();
 
-router.post("/auth/login", (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const { password } = req.body ?? {};
   if (!password) {
     res.status(400).json({ error: "Password required" });
@@ -48,7 +69,7 @@ router.post("/auth/login", (req, res) => {
   res.json({ token });
 });
 
-router.post("/auth/change-password", (req, res) => {
+router.post("/auth/change-password", async (req, res) => {
   const { current_password, new_password } = req.body ?? {};
   if (!current_password || !new_password) {
     res.status(400).json({ error: "Both current and new password are required" });
@@ -63,15 +84,15 @@ router.post("/auth/change-password", (req, res) => {
     res.status(400).json({ error: "New password must be at least 4 characters" });
     return;
   }
-  auth.password_hash = bcrypt.hashSync(new_password as string, 10);
-  saveAuth(auth);
+  const updated: AuthData = { ...auth, password_hash: bcrypt.hashSync(new_password as string, 10) };
+  await saveAuth(updated);
   res.json({ message: "Password changed successfully" });
 });
 
-router.post("/auth/reset-password", (_req, res) => {
+router.post("/auth/reset-password", async (_req, res) => {
   const auth = loadAuth();
-  auth.password_hash = bcrypt.hashSync("admin", 10);
-  saveAuth(auth);
+  const updated: AuthData = { ...auth, password_hash: bcrypt.hashSync("admin", 10) };
+  await saveAuth(updated);
   res.json({ message: "Password reset to 'admin'" });
 });
 

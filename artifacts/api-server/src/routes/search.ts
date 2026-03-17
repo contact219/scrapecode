@@ -2,13 +2,19 @@ import { Router } from "express";
 import { spawn } from "child_process";
 import { join } from "path";
 import { randomBytes } from "crypto";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
+import pool from "../lib/db";
+import { loadProfile } from "./profiles";
 
 const router = Router();
 
 const WORKSPACE = process.env.REPL_HOME ?? process.cwd();
-const PROFILES_DIR = join(WORKSPACE, "profiles");
 const WORKER = join(WORKSPACE, "search_worker.py");
+const TEMP_HOME = "/tmp/scrapedata";
+
+mkdirSync(join(TEMP_HOME, "profiles"), { recursive: true });
+mkdirSync(join(TEMP_HOME, "output"), { recursive: true });
+mkdirSync(join(TEMP_HOME, "logs"), { recursive: true });
 
 interface Job {
   status: "running" | "completed" | "error";
@@ -27,22 +33,30 @@ function jobHash(job: any): string {
   return `${(job.title || "").toLowerCase().trim()}|${(job.company || "").toLowerCase().trim()}`;
 }
 
-function seenFile(profileName: string): string {
-  return join(PROFILES_DIR, `seen_${profileName.replace(/[ /]/g, "_")}.json`);
+async function loadSeen(profileName: string): Promise<Set<string>> {
+  const res = await pool.query(
+    "SELECT hash FROM sc_seen_jobs WHERE profile_name = $1",
+    [profileName]
+  );
+  return new Set(res.rows.map((r) => r.hash));
 }
 
-function loadSeen(profileName: string): Set<string> {
-  const f = seenFile(profileName);
-  if (!existsSync(f)) return new Set();
-  try { return new Set(JSON.parse(readFileSync(f, "utf-8"))); } catch { return new Set(); }
+async function saveSeen(profileName: string, seen: Set<string>) {
+  if (seen.size === 0) return;
+  const values = [...seen]
+    .map((_, i) => `($1, $${i + 2})`)
+    .join(", ");
+  const params: any[] = [profileName, ...[...seen]];
+  await pool.query(
+    `INSERT INTO sc_seen_jobs (profile_name, hash)
+     SELECT $1, unnest($2::text[])
+     ON CONFLICT DO NOTHING`,
+    [profileName, [...seen]]
+  );
 }
 
-function saveSeen(profileName: string, seen: Set<string>) {
-  writeFileSync(seenFile(profileName), JSON.stringify([...seen], null, 2));
-}
-
-function markDuplicates(jobs: any[], profileName: string): { jobs: any[], newCount: number } {
-  const seen = loadSeen(profileName);
+async function markDuplicates(jobs: any[], profileName: string): Promise<{ jobs: any[], newCount: number }> {
+  const seen = await loadSeen(profileName);
   let newCount = 0;
   const marked = jobs.map(job => {
     const hash = jobHash(job);
@@ -50,15 +64,25 @@ function markDuplicates(jobs: any[], profileName: string): { jobs: any[], newCou
     if (isNew) newCount++;
     return { ...job, is_new: isNew };
   });
-  const updated = new Set(seen);
-  marked.forEach(j => updated.add(jobHash(j)));
-  saveSeen(profileName, updated);
+  const newHashes = new Set(marked.map(j => jobHash(j)));
+  await saveSeen(profileName, newHashes);
   return { jobs: marked, newCount };
 }
 
-router.post("/search", (req, res) => {
+function writeTempProfile(profile: Record<string, any>) {
+  const safeName = profile.name.replace(/[ /]/g, "_");
+  const dest = join(TEMP_HOME, "profiles", `${safeName}.json`);
+  writeFileSync(dest, JSON.stringify(profile, null, 2));
+}
+
+router.post("/search", async (req, res) => {
   const { profile_name, mock } = req.body ?? {};
   if (!profile_name) { res.status(400).json({ error: "profile_name required" }); return; }
+
+  const profile = await loadProfile(profile_name);
+  if (!profile) { res.status(404).json({ error: `Profile '${profile_name}' not found` }); return; }
+
+  writeTempProfile(profile);
 
   const jobId = randomBytes(4).toString("hex");
   _jobs.set(jobId, { status: "running", jobs: [], total: 0, filepath: "", error: "", profile_name, new_count: 0 });
@@ -67,7 +91,10 @@ router.post("/search", (req, res) => {
   const args = [WORKER, profile_name];
   if (mock) args.push("--mock");
 
-  const proc = spawn("python", args, { cwd: WORKSPACE });
+  const proc = spawn("python", args, {
+    cwd: WORKSPACE,
+    env: { ...process.env, REPL_HOME: TEMP_HOME },
+  });
   let buffer = "";
 
   proc.stdout.on("data", (chunk: Buffer) => {
@@ -84,14 +111,15 @@ router.post("/search", (req, res) => {
         _jobStreams.set(jobId, streams);
 
         if (event.type === "done") {
-          const job = _jobs.get(jobId)!;
-          const { jobs: markedJobs, newCount } = markDuplicates(event.jobs ?? [], profile_name);
-          job.status = "completed";
-          job.jobs = markedJobs;
-          job.total = event.total ?? 0;
-          job.filepath = event.filepath ?? "";
-          job.new_count = newCount;
-          _jobs.set(jobId, job);
+          markDuplicates(event.jobs ?? [], profile_name).then(({ jobs: markedJobs, newCount }) => {
+            const job = _jobs.get(jobId)!;
+            job.status = "completed";
+            job.jobs = markedJobs;
+            job.total = event.total ?? 0;
+            job.filepath = event.filepath ?? "";
+            job.new_count = newCount;
+            _jobs.set(jobId, job);
+          });
         } else if (event.type === "error") {
           const job = _jobs.get(jobId)!;
           job.status = "error";
