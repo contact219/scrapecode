@@ -4,11 +4,19 @@ import { loadAuth } from "../routes/auth";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  let token: string | null = null;
+
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7);
+  } else if (typeof req.query.token === "string" && req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
     res.status(401).json({ error: "Unauthorized — no token provided" });
     return;
   }
-  const token = authHeader.slice(7);
+
   try {
     const auth = loadAuth();
     jwt.verify(token, auth.jwt_secret);

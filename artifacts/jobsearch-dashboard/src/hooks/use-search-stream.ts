@@ -10,6 +10,9 @@ export interface SearchResult {
   filepath: string;
 }
 
+const BASE_URL = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+const TOKEN_KEY = "jspro_token";
+
 export function useSearchStream(jobId: string | null) {
   const [progress, setProgress] = useState<SearchProgress>({ pct: 0, msg: "" });
   const [done, setDone] = useState(false);
@@ -30,7 +33,9 @@ export function useSearchStream(jobId: string | null) {
     setError(null);
     setResult(null);
 
-    const es = new EventSource(`/api/search/stream/${jobId}`);
+    const token = localStorage.getItem(TOKEN_KEY) ?? "";
+    const url = `${BASE_URL}/api/search/stream/${jobId}?token=${encodeURIComponent(token)}`;
+    const es = new EventSource(url);
 
     es.onmessage = (e) => {
       try {
@@ -45,7 +50,7 @@ export function useSearchStream(jobId: string | null) {
           setDone(true);
           es.close();
         } else if (data.type === "error") {
-          setError(data.msg);
+          setError(data.msg ?? "Search error");
           setDone(true);
           es.close();
         } else if (data.type === "end") {
@@ -57,8 +62,9 @@ export function useSearchStream(jobId: string | null) {
       }
     };
 
-    es.onerror = () => {
-      setError("Lost connection to the streaming server.");
+    es.onerror = (e) => {
+      console.error("SSE connection error", e);
+      setError("Search worker error — check that the API server is running.");
       setDone(true);
       es.close();
     };
