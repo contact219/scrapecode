@@ -1,24 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
-  SidebarMenu, 
-  SidebarMenuButton, 
-  SidebarMenuItem, 
-  SidebarProvider, 
-  SidebarTrigger, 
-  SidebarHeader,
-  SidebarFooter,
+import {
+  Sidebar, SidebarContent, SidebarGroup, SidebarMenu,
+  SidebarMenuButton, SidebarMenuItem, SidebarProvider,
+  SidebarTrigger, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Search, 
-  FileText, 
-  History, 
-  Settings,
-  LogOut,
+import {
+  LayoutDashboard, Users, Search, FileText, History,
+  Settings, LogOut, Kanban,
 } from "lucide-react";
 import { ReactNode } from "react";
 import { useAuth } from "@/context/auth-context";
@@ -27,20 +15,18 @@ import { Button } from "@/components/ui/button";
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { logout } = useAuth();
-  
+
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/profiles", label: "Profiles", icon: Users },
-    { href: "/search", label: "Run Search", icon: Search },
-    { href: "/resume", label: "Resume Parser", icon: FileText },
-    { href: "/history", label: "Run History", icon: History },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/",        label: "Dashboard",    icon: LayoutDashboard },
+    { href: "/profiles",label: "Profiles",     icon: Users },
+    { href: "/search",  label: "Run Search",   icon: Search },
+    { href: "/resume",  label: "Resume Parser",icon: FileText },
+    { href: "/history", label: "Run History",  icon: History },
+    { href: "/tracker", label: "Job Tracker",  icon: Kanban },
+    { href: "/settings",label: "Settings",     icon: Settings },
   ];
 
-  const style = {
-    "--sidebar-width": "18rem",
-    "--sidebar-width-icon": "4rem",
-  };
+  const style = { "--sidebar-width": "18rem", "--sidebar-width-icon": "4rem" };
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
@@ -61,14 +47,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   const isActive = location === item.href;
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={isActive} 
-                        tooltip={item.label}
-                        className={`transition-all duration-200 rounded-xl py-6 ${isActive ? 'bg-primary/10 text-primary hover:bg-primary/15 font-medium' : 'hover:bg-muted font-normal'}`}
-                      >
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}
+                        className={`transition-all duration-200 rounded-xl py-6 ${isActive ? "bg-primary/10 text-primary hover:bg-primary/15 font-medium" : "hover:bg-muted font-normal"}`}>
                         <Link href={item.href} className="flex items-center gap-3">
-                          <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                           <span className="text-[15px]">{item.label}</span>
                         </Link>
                       </SidebarMenuButton>
@@ -79,20 +61,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter className="px-3 py-4 border-t border-border/40">
-            <Button
-              variant="ghost"
-              onClick={logout}
-              className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl py-6 font-normal transition-all"
-            >
+            <Button variant="ghost" onClick={logout}
+              className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl py-6 font-normal transition-all">
               <LogOut className="w-5 h-5" />
               <span className="text-[15px]">Sign Out</span>
             </Button>
           </SidebarFooter>
         </Sidebar>
-        
+
         <div className="flex-1 flex flex-col overflow-hidden relative w-full">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none mix-blend-screen" />
-          
           <header className="h-16 shrink-0 flex items-center justify-between border-b border-border/40 px-6 bg-background/60 backdrop-blur-xl sticky top-0 z-20">
             <SidebarTrigger className="hover:bg-primary/20 transition-colors w-10 h-10 rounded-xl" />
             <div className="flex items-center gap-4">
@@ -101,11 +79,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
           </header>
-          
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 relative z-0">
-            <div className="max-w-7xl mx-auto w-full">
-              {children}
-            </div>
+            <div className="max-w-7xl mx-auto w-full">{children}</div>
           </main>
         </div>
       </div>

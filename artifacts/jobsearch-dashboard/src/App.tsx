@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,25 +13,19 @@ import SearchPage from "@/pages/search";
 import Resume from "@/pages/resume";
 import HistoryPage from "@/pages/history";
 import SettingsPage from "@/pages/settings";
+import TrackerPage from "@/pages/tracker";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 5000,
-    }
+    queries: { refetchOnWindowFocus: false, staleTime: 5000 }
   }
 });
 
 function AuthenticatedApp() {
   const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
+  if (!isAuthenticated) return <LoginPage />;
   return (
     <AppLayout>
       <Switch>
@@ -40,6 +34,7 @@ function AuthenticatedApp() {
         <Route path="/search" component={SearchPage} />
         <Route path="/resume" component={Resume} />
         <Route path="/history" component={HistoryPage} />
+        <Route path="/tracker" component={TrackerPage} />
         <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
@@ -48,10 +43,7 @@ function AuthenticatedApp() {
 }
 
 function App() {
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
+  useEffect(() => { document.documentElement.classList.add("dark"); }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
