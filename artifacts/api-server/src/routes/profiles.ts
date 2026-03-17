@@ -30,10 +30,12 @@ function saveConfig(cfg: Record<string, any>) {
   writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
 }
 
+const RESERVED_FILES = new Set(["config.json", "auth.json"]);
+
 function listProfiles(): string[] {
   try {
     return readdirSync(PROFILES_DIR)
-      .filter((f) => f.endsWith(".json") && f !== "config.json")
+      .filter((f) => f.endsWith(".json") && !RESERVED_FILES.has(f) && !f.startsWith("seen_") && !f.startsWith("job_tracker"))
       .map((f) => f.slice(0, -5).replace(/_/g, " "));
   } catch {
     return [];
@@ -105,7 +107,8 @@ router.get("/profiles/:name", (req, res) => {
 router.put("/profiles/:name", (req, res) => {
   const existing = loadProfile(req.params.name);
   if (!existing) return res.status(404).json({ error: "Not found" });
-  const updated = { ...existing, ...req.body, name: existing.name };
+  const resolvedName = existing.name ?? req.params.name;
+  const updated = { ...existing, ...req.body, name: resolvedName };
   saveProfile(updated);
   res.json(updated);
 });

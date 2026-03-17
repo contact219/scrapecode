@@ -1,34 +1,13 @@
 {
   "salary_min": 100,
   "work_type": "remote",
-  "sources": [
-    "indeed",
-    "linkedin",
-    "ziprecruiter",
-    "glassdoor",
-    "adzuna"
-  ],
+  "sources": ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna"],
   "queries": [
-    {
-      "query": "procurement manager remote",
-      "category": "custom"
-    },
-    {
-      "query": "operations manager remote",
-      "category": "resume"
-    },
-    {
-      "query": "contract administrator remote",
-      "category": "resume"
-    },
-    {
-      "query": "procurement specialist remote",
-      "category": "resume"
-    },
-    {
-      "query": "contract manager remote",
-      "category": "resume"
-    }
+    {"query": "procurement manager remote", "category": "custom"},
+    {"query": "operations manager remote", "category": "resume"},
+    {"query": "contract administrator remote", "category": "resume"},
+    {"query": "procurement specialist remote", "category": "resume"},
+    {"query": "contract manager remote", "category": "resume"}
   ],
   "resume_ref": "",
   "name": "Vendor Manager",
