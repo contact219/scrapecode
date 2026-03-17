@@ -48,10 +48,11 @@ interface Job {
   error: string;
   profile_name: string;
   new_count: number;
+  progress_pct: number;
+  progress_msg: string;
 }
 
 const _jobs = new Map<string, Job>();
-const _jobStreams = new Map<string, string[]>();
 
 function jobHash(job: any): string {
   return `${(job.title || "").toLowerCase().trim()}|${(job.company || "").toLowerCase().trim()}`;
@@ -109,11 +110,15 @@ router.post("/search", async (req, res) => {
   writeTempProfile(profile);
 
   const jobId = randomBytes(4).toString("hex");
-  _jobs.set(jobId, { status: "running", jobs: [], total: 0, filepath: "", error: "", profile_name, new_count: 0 });
-  _jobStreams.set(jobId, []);
+  _jobs.set(jobId, {
+    status: "running", jobs: [], total: 0, filepath: "", error: "",
+    profile_name, new_count: 0, progress_pct: 0, progress_msg: "Starting search worker...",
+  });
 
   const args = [WORKER, profile_name];
   if (mock) args.push("--mock");
+
+  console.log(`[search] Spawning worker: ${PYTHON} ${args.join(" ")}`);
 
   const proc = spawn(PYTHON, args, {
     cwd: WORKSPACE,
@@ -126,11 +131,8 @@ router.post("/search", async (req, res) => {
     const job = _jobs.get(jobId)!;
     job.status = "error";
     job.error = `Failed to start search worker: ${err.message}`;
+    job.progress_msg = job.error;
     _jobs.set(jobId, job);
-    const streams = _jobStreams.get(jobId) ?? [];
-    streams.push(JSON.stringify({ type: "error", msg: job.error }));
-    streams.push(JSON.stringify({ type: "end" }));
-    _jobStreams.set(jobId, streams);
   });
 
   proc.stdout.on("data", (chunk: Buffer) => {
@@ -142,24 +144,32 @@ router.post("/search", async (req, res) => {
       if (!trimmed) continue;
       try {
         const event = JSON.parse(trimmed);
-        const streams = _jobStreams.get(jobId) ?? [];
-        streams.push(trimmed);
-        _jobStreams.set(jobId, streams);
+        const job = _jobs.get(jobId);
+        if (!job) continue;
 
-        if (event.type === "done") {
+        if (event.type === "progress") {
+          job.progress_pct = event.pct ?? job.progress_pct;
+          job.progress_msg = event.msg ?? job.progress_msg;
+          _jobs.set(jobId, job);
+        } else if (event.type === "status") {
+          job.progress_msg = event.msg ?? job.progress_msg;
+          _jobs.set(jobId, job);
+        } else if (event.type === "done") {
           markDuplicates(event.jobs ?? [], profile_name).then(({ jobs: markedJobs, newCount }) => {
-            const job = _jobs.get(jobId)!;
-            job.status = "completed";
-            job.jobs = markedJobs;
-            job.total = event.total ?? 0;
-            job.filepath = event.filepath ?? "";
-            job.new_count = newCount;
-            _jobs.set(jobId, job);
+            const j = _jobs.get(jobId)!;
+            j.status = "completed";
+            j.jobs = markedJobs;
+            j.total = event.total ?? 0;
+            j.filepath = event.filepath ?? "";
+            j.new_count = newCount;
+            j.progress_pct = 100;
+            j.progress_msg = "Search complete!";
+            _jobs.set(jobId, j);
           });
         } else if (event.type === "error") {
-          const job = _jobs.get(jobId)!;
           job.status = "error";
           job.error = event.msg ?? "Unknown error";
+          job.progress_msg = job.error;
           _jobs.set(jobId, job);
         }
       } catch {}
@@ -170,53 +180,18 @@ router.post("/search", async (req, res) => {
     console.error("[search_worker stderr]", chunk.toString());
   });
 
-  proc.on("close", () => {
-    const streams = _jobStreams.get(jobId) ?? [];
-    streams.push(JSON.stringify({ type: "end" }));
-    _jobStreams.set(jobId, streams);
-    const job = _jobs.get(jobId)!;
-    if (job.status === "running") {
+  proc.on("close", (code) => {
+    console.log(`[search] Worker exited with code ${code}`);
+    const job = _jobs.get(jobId);
+    if (job && job.status === "running") {
       job.status = "error";
-      job.error = "Worker exited unexpectedly";
+      job.error = `Worker exited unexpectedly (code ${code})`;
+      job.progress_msg = job.error;
       _jobs.set(jobId, job);
     }
   });
 
   res.json({ job_id: jobId, message: "Search started" });
-});
-
-router.get("/search/stream/:jobId", (req, res) => {
-  const { jobId } = req.params;
-  if (!_jobStreams.has(jobId)) { res.status(404).json({ error: "Job not found" }); return; }
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-
-  let sentIndex = 0;
-  let ended = false;
-
-  const interval = setInterval(() => {
-    const streams = _jobStreams.get(jobId) ?? [];
-    while (sentIndex < streams.length) {
-      const line = streams[sentIndex];
-      sentIndex++;
-      if (line === undefined) continue;
-      try {
-        const event = JSON.parse(line);
-        res.write(`data: ${line}\n\n`);
-        if (event.type === "end" || event.type === "done" || event.type === "error") {
-          ended = true;
-          break;
-        }
-      } catch {}
-    }
-    if (ended) { clearInterval(interval); res.end(); }
-  }, 200);
-
-  req.on("close", () => clearInterval(interval));
 });
 
 router.get("/search/results/:jobId", (req, res) => {
@@ -230,6 +205,8 @@ router.get("/search/results/:jobId", (req, res) => {
     filepath: job.filepath,
     error: job.error,
     new_count: job.new_count,
+    progress_pct: job.progress_pct,
+    progress_msg: job.progress_msg,
   });
 });
 
