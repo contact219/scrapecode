@@ -165,7 +165,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"Indeed scrape error: {e}")
+            logger.warning(f"Indeed scrape error: {e}")
             return []
 
     def _linkedin(self, query: str, work_type: str) -> list[dict]:
@@ -198,7 +198,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"LinkedIn scrape error: {e}")
+            logger.warning(f"LinkedIn scrape error: {e}")
             return []
 
     def _ziprecruiter(self, query: str, work_type: str) -> list[dict]:
@@ -229,7 +229,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"ZipRecruiter scrape error: {e}")
+            logger.warning(f"ZipRecruiter scrape error: {e}")
             return []
 
     def _glassdoor(self, query: str, work_type: str) -> list[dict]:
@@ -259,7 +259,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"Glassdoor scrape error: {e}")
+            logger.warning(f"Glassdoor scrape error: {e}")
             return []
 
     def _adzuna(self, query: str, work_type: str) -> list[dict]:
@@ -294,7 +294,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"Adzuna scrape error: {e}")
+            logger.warning(f"Adzuna scrape error: {e}")
             return []
 
     def _dice(self, query: str, work_type: str) -> list[dict]:
@@ -338,7 +338,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"Dice scrape error: {e}")
+            logger.warning(f"Dice scrape error: {e}")
             return []
 
     def _monster(self, query: str, work_type: str) -> list[dict]:
@@ -398,7 +398,7 @@ class JobScraper:
                     })
                 return jobs
             except Exception as e2:
-                logger.debug(f"Monster scrape error: {e2}")
+                logger.warning(f"Monster scrape error: {e2}")
                 return []
 
     def _stackoverflow(self, query: str, work_type: str) -> list[dict]:
@@ -433,7 +433,7 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"Stack Overflow scrape error: {e}")
+            logger.warning(f"Stack Overflow scrape error: {e}")
             return []
 
     def _theladders(self, query: str, work_type: str) -> list[dict]:
@@ -469,5 +469,5 @@ class JobScraper:
                 })
             return jobs
         except Exception as e:
-            logger.debug(f"The Ladders scrape error: {e}")
+            logger.warning(f"The Ladders scrape error: {e}")
             return []

@@ -155,7 +155,7 @@ router.post("/search", async (req, res) => {
           job.progress_msg = event.msg ?? job.progress_msg;
           _jobs.set(jobId, job);
         } else if (event.type === "done") {
-          markDuplicates(event.jobs ?? [], profile_name).then(({ jobs: markedJobs, newCount }) => {
+          markDuplicates(event.jobs ?? [], profile_name).then(async ({ jobs: markedJobs, newCount }) => {
             const j = _jobs.get(jobId)!;
             j.status = "completed";
             j.jobs = markedJobs;
@@ -165,6 +165,21 @@ router.post("/search", async (req, res) => {
             j.progress_pct = 100;
             j.progress_msg = "Search complete!";
             _jobs.set(jobId, j);
+            try {
+              const sourcesSummary: Record<string, number> = {};
+              for (const job of markedJobs) {
+                const src = job.source ?? "unknown";
+                sourcesSummary[src] = (sourcesSummary[src] ?? 0) + 1;
+              }
+              await pool.query(
+                `INSERT INTO sc_run_history (profile_name, total_jobs, new_jobs, filepath, sources_summary)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [profile_name, event.total ?? 0, newCount, event.filepath ?? "", JSON.stringify(sourcesSummary)]
+              );
+              console.log(`[search] Saved history: ${profile_name} → ${event.total ?? 0} jobs`);
+            } catch (dbErr) {
+              console.error("[search] Failed to save history:", dbErr);
+            }
           });
         } else if (event.type === "error") {
           job.status = "error";

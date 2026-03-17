@@ -7,6 +7,7 @@ Args: <profile_json_file> [--mock]
 """
 
 import json
+import logging
 import os
 import sys
 import time
@@ -17,6 +18,12 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
 REPLIT_HOME = Path(os.environ.get("REPL_HOME", "."))
+
+logging.basicConfig(
+    level=logging.WARNING,
+    format="[%(levelname)s] %(name)s: %(message)s",
+    stream=sys.stderr,
+)
 
 from core.config_manager import ConfigManager, DEFAULTS
 DEFAULTS["output_dir"]   = str(REPLIT_HOME / "output")
