@@ -131,7 +131,7 @@ export default function Dashboard() {
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Jobs Found</p>
                       </div>
                       {run.filepath && (
-                        <a href={`/api/output/download/${run.filepath.split('/').pop()}`}>
+                        <a href={`/api/output/download/${run.filepath.split('/').pop()}?token=${encodeURIComponent(localStorage.getItem("jspro_token") ?? "")}`}>
                           <Button variant="secondary" size="sm" className="rounded-lg shadow-sm border border-border/50">
                             Download Excel
                           </Button>
