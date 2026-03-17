@@ -25,7 +25,7 @@ const TEMPLATES = [
       name: "Software Engineer",
       salary_min: 90000,
       work_type: "remote" as const,
-      sources: ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna"],
+      sources: ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna", "dice", "stackoverflow"],
       queries: [
         { query: "software engineer remote", category: "custom" },
         { query: "full stack developer remote", category: "custom" },
@@ -42,7 +42,7 @@ const TEMPLATES = [
       name: "Product Manager",
       salary_min: 100000,
       work_type: "remote" as const,
-      sources: ["indeed", "linkedin", "glassdoor", "adzuna"],
+      sources: ["indeed", "linkedin", "glassdoor", "adzuna", "monster", "theladders"],
       queries: [
         { query: "product manager remote", category: "custom" },
         { query: "senior product manager remote", category: "custom" },
@@ -58,7 +58,7 @@ const TEMPLATES = [
       name: "Data Analyst",
       salary_min: 70000,
       work_type: "remote" as const,
-      sources: ["indeed", "linkedin", "ziprecruiter", "adzuna"],
+      sources: ["indeed", "linkedin", "ziprecruiter", "adzuna", "dice", "monster"],
       queries: [
         { query: "data analyst remote", category: "custom" },
         { query: "business intelligence analyst remote", category: "custom" },
@@ -74,7 +74,7 @@ const TEMPLATES = [
       name: "Marketing Manager",
       salary_min: 70000,
       work_type: "remote" as const,
-      sources: ["indeed", "linkedin", "glassdoor", "adzuna"],
+      sources: ["indeed", "linkedin", "glassdoor", "adzuna", "monster"],
       queries: [
         { query: "marketing manager remote", category: "custom" },
         { query: "digital marketing manager remote", category: "custom" },
@@ -90,7 +90,7 @@ const TEMPLATES = [
       name: "Finance Procurement",
       salary_min: 75000,
       work_type: "remote" as const,
-      sources: ["indeed", "linkedin", "ziprecruiter", "glassdoor"],
+      sources: ["indeed", "linkedin", "ziprecruiter", "glassdoor", "theladders", "monster"],
       queries: [
         { query: "procurement manager remote", category: "custom" },
         { query: "financial analyst remote", category: "custom" },
@@ -212,7 +212,7 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: "", salary_min: 0, work_type: "remote",
-      sources: ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna"],
+      sources: ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna", "dice", "monster"],
       queries: [],
       schedule: "none", schedule_hour: 8, schedule_minute: 0, schedule_weekday: 1,
     }
@@ -300,7 +300,18 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: {
     return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading profile data...</div>;
   }
 
-  const sourceOptions = ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna"];
+  const sourceOptions = ["indeed", "linkedin", "ziprecruiter", "glassdoor", "adzuna", "dice", "monster", "stackoverflow", "theladders"];
+  const sourceLabels: Record<string, string> = {
+    indeed: "Indeed",
+    linkedin: "LinkedIn",
+    ziprecruiter: "ZipRecruiter",
+    glassdoor: "Glassdoor",
+    adzuna: "Adzuna",
+    dice: "Dice",
+    monster: "Monster",
+    stackoverflow: "Stack Overflow",
+    theladders: "The Ladders",
+  };
   const schedule = form.watch("schedule");
 
   return (
@@ -410,7 +421,7 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: {
                               : field.onChange(field.value?.filter(v => v !== source))
                           } />
                       </FormControl>
-                      <FormLabel className="font-medium capitalize cursor-pointer mb-0">{source}</FormLabel>
+                      <FormLabel className="font-medium cursor-pointer mb-0">{sourceLabels[source] ?? source}</FormLabel>
                     </FormItem>
                   )} />
                 ))}

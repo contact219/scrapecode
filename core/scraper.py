@@ -82,6 +82,10 @@ class JobScraper:
             "ziprecruiter": self._ziprecruiter,
             "glassdoor": self._glassdoor,
             "adzuna": self._adzuna,
+            "dice": self._dice,
+            "monster": self._monster,
+            "stackoverflow": self._stackoverflow,
+            "theladders": self._theladders,
         }
 
         total_steps = len(queries) * len(sources)
@@ -291,4 +295,179 @@ class JobScraper:
             return jobs
         except Exception as e:
             logger.debug(f"Adzuna scrape error: {e}")
+            return []
+
+    def _dice(self, query: str, work_type: str) -> list[dict]:
+        """Dice.com — uses their JSON search API."""
+        q = query + (" remote" if work_type == "remote" else "")
+        params = {
+            "q": q,
+            "countryCode": "US",
+            "language": "en",
+            "sort": "30",
+            "pageSize": str(self.max_results),
+            "pageNumber": "0",
+        }
+        api_url = "https://job-search-api.sap.dice.com/job-search/search"
+        try:
+            resp = self.session.get(api_url, params=params, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            jobs = []
+            for hit in data.get("data", {}).get("hits", []):
+                company = hit.get("company", {})
+                company_name = company.get("name", "") if isinstance(company, dict) else str(company)
+                locations = hit.get("jobLocation", [])
+                if isinstance(locations, list) and locations:
+                    loc = locations[0]
+                    location = f"{loc.get('city', '')}, {loc.get('state', '')}".strip(", ")
+                else:
+                    location = ""
+                salary_info = hit.get("salary", {})
+                salary = ""
+                if isinstance(salary_info, dict) and salary_info.get("toSalary"):
+                    salary = f"${salary_info.get('fromSalary', '')}–${salary_info.get('toSalary', '')}"
+                job_url = hit.get("applyUrl") or hit.get("detailUrl") or f"https://www.dice.com/jobs/detail/{hit.get('id', '')}"
+                jobs.append({
+                    "title": hit.get("title", ""),
+                    "company": company_name,
+                    "location": location or ("Remote" if work_type == "remote" else ""),
+                    "salary": salary,
+                    "description": hit.get("jobDescription", "")[:200] if hit.get("jobDescription") else "",
+                    "url": job_url,
+                })
+            return jobs
+        except Exception as e:
+            logger.debug(f"Dice scrape error: {e}")
+            return []
+
+    def _monster(self, query: str, work_type: str) -> list[dict]:
+        """Monster.com — uses their jobs API."""
+        params = {
+            "q": query,
+            "where": "Remote" if work_type == "remote" else "",
+            "page": "1",
+            "country": "us",
+        }
+        api_url = "https://appsapi.monster.io/jobs-svx-service/jobs-svx/v2/jobs"
+        try:
+            resp = self.session.get(api_url, params=params, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            jobs = []
+            for item in data.get("jobResults", []):
+                job = item.get("job", {})
+                locations = job.get("locations", [])
+                location = ""
+                if locations:
+                    loc = locations[0]
+                    location = f"{loc.get('city', '')}, {loc.get('state', '')}".strip(", ")
+                company = job.get("company", {})
+                company_name = company.get("name", "") if isinstance(company, dict) else ""
+                jobs.append({
+                    "title": job.get("title", ""),
+                    "company": company_name,
+                    "location": location or ("Remote" if work_type == "remote" else ""),
+                    "salary": "",
+                    "description": job.get("descriptionTeaser", ""),
+                    "url": job.get("detailUrl", ""),
+                })
+            return jobs
+        except Exception as e:
+            # Fallback: try HTML scraping
+            try:
+                html_params = {"q": query, "where": "Remote" if work_type == "remote" else ""}
+                resp = self.session.get("https://www.monster.com/jobs/search", params=html_params, timeout=15)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.text, "lxml")
+                jobs = []
+                for card in soup.select("div[data-jobid], section.card-content, div.job-cardstyle__JobCardComponent"):
+                    title_el = card.select_one("h2 a, a.job-cardstyle__TitleLink, h3 a")
+                    company_el = card.select_one("span[class*='company'], div[class*='company'], p[class*='company']")
+                    loc_el = card.select_one("span[class*='location'], div[class*='location']")
+                    if not title_el:
+                        continue
+                    href = title_el.get("href", "")
+                    jobs.append({
+                        "title": title_el.get_text(strip=True),
+                        "company": company_el.get_text(strip=True) if company_el else "",
+                        "location": loc_el.get_text(strip=True) if loc_el else "",
+                        "salary": "",
+                        "description": "",
+                        "url": href if href.startswith("http") else f"https://www.monster.com{href}",
+                    })
+                return jobs
+            except Exception as e2:
+                logger.debug(f"Monster scrape error: {e2}")
+                return []
+
+    def _stackoverflow(self, query: str, work_type: str) -> list[dict]:
+        """Stack Overflow Jobs — searches via their job listing pages."""
+        params = {
+            "q": query,
+            "r": "true" if work_type == "remote" else "false",
+        }
+        url = "https://stackoverflow.com/jobs"
+        try:
+            resp = self.session.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
+            jobs = []
+            for card in soup.select("div.-job, div.js-result, div[data-jobid]"):
+                title_el = card.select_one("h2 a, a.s-link, a[href*='/jobs/']")
+                company_el = card.select_one("span.fc-black-700, h3 span, div.fc-black-500")
+                loc_el = card.select_one("span.fc-black-500, div[class*='location']")
+                salary_el = card.select_one("span[class*='salary'], div[class*='salary']")
+                if not title_el:
+                    continue
+                href = title_el.get("href", "")
+                if href and not href.startswith("http"):
+                    href = "https://stackoverflow.com" + href
+                jobs.append({
+                    "title": title_el.get_text(strip=True),
+                    "company": company_el.get_text(strip=True) if company_el else "",
+                    "location": loc_el.get_text(strip=True) if loc_el else "",
+                    "salary": salary_el.get_text(strip=True) if salary_el else "",
+                    "description": "",
+                    "url": href,
+                })
+            return jobs
+        except Exception as e:
+            logger.debug(f"Stack Overflow scrape error: {e}")
+            return []
+
+    def _theladders(self, query: str, work_type: str) -> list[dict]:
+        """The Ladders (theladders.com) — $100k+ positions."""
+        params = {
+            "title": query,
+            "remote": "true" if work_type == "remote" else "false",
+            "pg": "1",
+        }
+        url = "https://www.theladders.com/jobs/search-jobs"
+        try:
+            resp = self.session.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
+            jobs = []
+            for card in soup.select("div[class*='JobCard'], li[class*='job-result'], div[data-cy='job-card']"):
+                title_el = card.select_one("a[class*='title'], h2 a, h3 a, span[class*='title']")
+                company_el = card.select_one("span[class*='company'], div[class*='company'], a[class*='company']")
+                loc_el = card.select_one("span[class*='location'], div[class*='location'], li[class*='location']")
+                salary_el = card.select_one("span[class*='salary'], div[class*='salary'], li[class*='salary']")
+                if not title_el:
+                    continue
+                href = title_el.get("href", "")
+                if href and not href.startswith("http"):
+                    href = "https://www.theladders.com" + href
+                jobs.append({
+                    "title": title_el.get_text(strip=True),
+                    "company": company_el.get_text(strip=True) if company_el else "",
+                    "location": loc_el.get_text(strip=True) if loc_el else "",
+                    "salary": salary_el.get_text(strip=True) if salary_el else "",
+                    "description": "",
+                    "url": href,
+                })
+            return jobs
+        except Exception as e:
+            logger.debug(f"The Ladders scrape error: {e}")
             return []
