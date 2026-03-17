@@ -1,16 +1,40 @@
 import { Router } from "express";
-import { spawn } from "child_process";
-import { join } from "path";
+import { spawn, execFileSync } from "child_process";
+import { join, resolve } from "path";
 import { randomBytes } from "crypto";
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, writeFileSync, existsSync } from "fs";
 import pool from "../lib/db";
 import { loadProfile } from "./profiles";
 
 const router = Router();
 
-const WORKSPACE = process.env.REPL_HOME ?? process.cwd();
+// Resolve workspace root reliably across dev and production:
+// 1. If REPL_HOME points to a dir that contains search_worker.py, use it
+// 2. Otherwise climb from __dirname (dist/ -> api-server -> artifacts -> root)
+function resolveWorkspace(): string {
+  const fromEnv = process.env.REPL_HOME;
+  if (fromEnv && existsSync(join(fromEnv, "search_worker.py"))) return fromEnv;
+  // __dirname in the compiled bundle is artifacts/api-server/dist/
+  const fromDir = resolve(__dirname, "../../..");
+  if (existsSync(join(fromDir, "search_worker.py"))) return fromDir;
+  // Last resort: cwd
+  return process.cwd();
+}
+
+// Prefer python3; fall back to python
+function resolvePython(): string {
+  for (const cmd of ["python3", "python"]) {
+    try { execFileSync(cmd, ["--version"], { stdio: "ignore" }); return cmd; } catch {}
+  }
+  return "python3";
+}
+
+const WORKSPACE = resolveWorkspace();
+const PYTHON = resolvePython();
 const WORKER = join(WORKSPACE, "search_worker.py");
 const TEMP_HOME = "/tmp/scrapedata";
+
+console.log(`[search] WORKSPACE=${WORKSPACE} PYTHON=${PYTHON} WORKER=${WORKER}`);
 
 mkdirSync(join(TEMP_HOME, "profiles"), { recursive: true });
 mkdirSync(join(TEMP_HOME, "output"), { recursive: true });
@@ -91,11 +115,23 @@ router.post("/search", async (req, res) => {
   const args = [WORKER, profile_name];
   if (mock) args.push("--mock");
 
-  const proc = spawn("python", args, {
+  const proc = spawn(PYTHON, args, {
     cwd: WORKSPACE,
     env: { ...process.env, REPL_HOME: TEMP_HOME },
   });
   let buffer = "";
+
+  proc.on("error", (err) => {
+    console.error("[search_worker spawn error]", err.message);
+    const job = _jobs.get(jobId)!;
+    job.status = "error";
+    job.error = `Failed to start search worker: ${err.message}`;
+    _jobs.set(jobId, job);
+    const streams = _jobStreams.get(jobId) ?? [];
+    streams.push(JSON.stringify({ type: "error", msg: job.error }));
+    streams.push(JSON.stringify({ type: "end" }));
+    _jobStreams.set(jobId, streams);
+  });
 
   proc.stdout.on("data", (chunk: Buffer) => {
     buffer += chunk.toString();
