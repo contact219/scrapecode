@@ -140,8 +140,11 @@ class ResumeParser:
 
         titles = found["titles"][:4]
         industries = found["industries"][:2]
-        tools = found["tools_systems"][:2]
+        tools = found["tools_systems"][:3]
+        certs = found["certifications"][:2]
+        contract_skills = found["contract_skills"]
 
+        # --- Title-based queries (most specific) ---
         for title in titles:
             queries.add(f"{title} remote")
             queries.add(f"{title} hybrid")
@@ -154,26 +157,46 @@ class ResumeParser:
             for tool in tools[:1]:
                 queries.add(f"{title} {tool} remote")
 
-        if found["contract_skills"]:
-            if "far" in found["contract_skills"] or "dfars" in found["contract_skills"]:
+        # Government / contract specialties
+        if contract_skills:
+            if "far" in contract_skills or "dfars" in contract_skills:
                 queries.add("contract administrator FAR DFARS remote")
                 queries.add("subcontracts manager defense remote")
 
-        if found["certifications"]:
-            for cert in found["certifications"][:2]:
-                if titles:
-                    queries.add(f"operations manager {cert} remote")
+        # Cert-enhanced queries (only when tied to a found title)
+        if certs and titles:
+            for cert in certs[:1]:
+                queries.add(f"{titles[0]} {cert} remote")
 
-        fallbacks = [
-            "procurement manager remote",
-            "contract administrator remote",
-            "vendor manager remote",
-            "supply chain manager remote",
-            "operations manager remote",
-        ]
-        for fb in fallbacks:
-            if len(queries) >= 10:
-                break
-            queries.add(fb)
+        # --- No titles found: generate from tools / industries / certs ---
+        if not titles:
+            # Tool-specialist queries
+            for tool in tools[:3]:
+                queries.add(f"{tool} specialist remote")
+                queries.add(f"{tool} consultant remote")
 
-        return sorted(queries)
+            # Industry-analyst queries
+            for industry in industries[:2]:
+                queries.add(f"business analyst {industry} remote")
+                queries.add(f"project manager {industry} remote")
+
+            # Tool + industry combos
+            for tool in tools[:2]:
+                for industry in industries[:1]:
+                    queries.add(f"{tool} {industry} remote")
+
+            # Cert-based queries when no titles
+            for cert in certs[:2]:
+                queries.add(f"analyst {cert} remote")
+                queries.add(f"manager {cert} remote")
+
+            # Truly generic last-resort (only fires when resume had nothing at all)
+            if not tools and not industries and not certs:
+                queries.update([
+                    "business analyst remote",
+                    "project manager remote",
+                    "operations manager remote",
+                    "program manager remote",
+                ])
+
+        return sorted(queries)[:12]
