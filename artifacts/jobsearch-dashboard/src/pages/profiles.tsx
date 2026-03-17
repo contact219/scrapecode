@@ -1,6 +1,6 @@
 import { PageTransition } from "@/components/page-transition";
 import { useListProfiles, useGetProfile, useCreateProfile, useUpdateProfile, useDeleteProfile, useGetActiveProfile, useSetActiveProfile } from "@workspace/api-client-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,7 +179,7 @@ export default function Profiles() {
             {isCreating ? (
               <ProfileEditor mode="create" onSuccess={(name) => { setIsCreating(false); setSelectedName(name); }} />
             ) : selectedName ? (
-              <ProfileEditor mode="edit" profileName={selectedName} isActive={activeProfile === selectedName} />
+              <ProfileEditor key={selectedName} mode="edit" profileName={selectedName} isActive={activeProfile === selectedName} />
             ) : (
               <Card className="border-dashed bg-transparent border-2 border-border/50 h-[400px] flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
@@ -219,9 +219,11 @@ function ProfileEditor({ mode, profileName, isActive, onSuccess }: {
   });
 
   const { fields, append, remove, replace } = useFieldArray({ control: form.control, name: "queries" });
+  const formLoaded = useRef(false);
 
   useEffect(() => {
-    if (mode === "edit" && profileData) {
+    if (mode === "edit" && profileData && !formLoaded.current) {
+      formLoaded.current = true;
       form.reset({
         name: profileData.name,
         salary_min: profileData.salary_min || 0,
