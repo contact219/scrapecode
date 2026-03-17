@@ -31,5 +31,9 @@
     }
   ],
   "resume_ref": "",
-  "name": "Vendor Manager"
+  "name": "Vendor Manager",
+  "schedule": "none",
+  "schedule_hour": 8,
+  "schedule_minute": 0,
+  "schedule_weekday": 1
 }
