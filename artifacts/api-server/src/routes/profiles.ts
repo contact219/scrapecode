@@ -92,6 +92,9 @@ router.get("/profiles/active", (_req, res) => {
 
 router.post("/profiles/active", (req, res) => {
   const { name } = req.body ?? {};
+  if (name && !listProfiles().includes(name)) {
+    return res.status(400).json({ error: `'${name}' is not a valid profile` });
+  }
   const cfg = loadConfig();
   cfg.active_profile = name ?? null;
   saveConfig(cfg);

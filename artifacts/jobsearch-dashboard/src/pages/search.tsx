@@ -134,9 +134,9 @@ export default function SearchPage() {
                 </div>
                 {profile && (
                   <div className="flex flex-wrap gap-3">
-                    <Badge variant="secondary" className="px-3 py-1.5 text-sm bg-muted/50 border-border/50"><Search className="w-3.5 h-3.5 mr-2 text-primary" /> {profile.queries.length} Queries</Badge>
-                    <Badge variant="secondary" className="px-3 py-1.5 text-sm bg-muted/50 border-border/50"><Building2 className="w-3.5 h-3.5 mr-2 text-primary" /> {profile.sources.length} Sources</Badge>
-                    <Badge variant="secondary" className="px-3 py-1.5 text-sm bg-muted/50 border-border/50"><MapPin className="w-3.5 h-3.5 mr-2 text-primary" /> {profile.work_type.toUpperCase()}</Badge>
+                    <Badge variant="secondary" className="px-3 py-1.5 text-sm bg-muted/50 border-border/50"><Search className="w-3.5 h-3.5 mr-2 text-primary" /> {profile.queries?.length ?? 0} Queries</Badge>
+                    <Badge variant="secondary" className="px-3 py-1.5 text-sm bg-muted/50 border-border/50"><Building2 className="w-3.5 h-3.5 mr-2 text-primary" /> {profile.sources?.length ?? 0} Sources</Badge>
+                    <Badge variant="secondary" className="px-3 py-1.5 text-sm bg-muted/50 border-border/50"><MapPin className="w-3.5 h-3.5 mr-2 text-primary" /> {profile.work_type?.toUpperCase() ?? ""}</Badge>
                   </div>
                 )}
                 <div className="flex items-center space-x-3 pt-2">
