@@ -208,7 +208,7 @@ export default function SearchPage() {
                   )}
                 </div>
                 {resultsData.filepath && (
-                  <a href={`${API_BASE}/api/output/download/${resultsData.filepath.split('/').pop()}`}>
+                  <a href={`${API_BASE}/api/output/download/${resultsData.filepath.split('/').pop()}?token=${encodeURIComponent(localStorage.getItem("jspro_token") ?? "")}`}>
                     <Button className="h-11 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25">
                       <FileSpreadsheet className="w-5 h-5 mr-2" /> Download Excel
                     </Button>

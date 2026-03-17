@@ -79,7 +79,7 @@ export default function HistoryPage() {
                           <span>{(file.size / 1024).toFixed(1)} KB</span>
                         </div>
                       </div>
-                      <a href={file.download_url}>
+                      <a href={`${file.download_url}?token=${encodeURIComponent(localStorage.getItem("jspro_token") ?? "")}`}>
                         <Button size="sm" variant="outline" className="shrink-0 h-9 rounded-lg hover:text-primary hover:border-primary/50">
                           <Download className="w-4 h-4 mr-2" /> Download
                         </Button>
